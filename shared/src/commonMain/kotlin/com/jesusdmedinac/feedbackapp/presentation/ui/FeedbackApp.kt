@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,15 +38,21 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jesusdmedinac.feedbackapp.data.model.Answer
+import com.jesusdmedinac.feedbackapp.data.model.AnswerPerQuestion
 import com.jesusdmedinac.feedbackapp.data.model.Question
 import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSource
 import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSourceImpl
+import com.jesusdmedinac.feedbackapp.domain.model.RateStar
 import com.jesusdmedinac.feedbackapp.presentation.ui.style.FeedbackAppTheme
+import com.jesusdmedinac.feedbackapp.utils.currentTimeInMillis
 import example.imageviewer.model.WrappedHttpClient
 import example.imageviewer.toImageBitmap
 import example.imageviewer.utils.ioDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.resource
@@ -64,19 +71,17 @@ fun FeedbackApp(httpClient: WrappedHttpClient) {
 
 @Composable
 fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
-    var listOfQuestions by remember { mutableStateOf<List<Question>>(emptyList()) }
-    var currentQuestion by remember { mutableStateOf(DomainQuestion()) }
-
-    val composeScope = rememberCoroutineScope()
+    val feedbackAppState = FeedbackAppState(questionRemoteDataSource)
     val ioScope: CoroutineScope = rememberCoroutineScope { ioDispatcher }
-
     LaunchedEffect(Unit) {
         ioScope.launch {
-            listOfQuestions = questionRemoteDataSource.getQuestions()
-                .sortedBy { it.order }
-            currentQuestion = listOfQuestions.first().toDomain()
+            feedbackAppState.getQuestions()
         }
     }
+
+    val isLoading by feedbackAppState.isLoading.collectAsState()
+    val listOfQuestions by feedbackAppState.listOfQuestions.collectAsState()
+    val currentQuestion by feedbackAppState.currentQuestion.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -95,88 +100,162 @@ fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
                 QuestionBlock(currentQuestion)
                 Spacer(modifier = Modifier.size(32.dp))
                 RatingBlock(
+                    isEnabled = !isLoading,
                     rating = currentQuestion.rating,
-                    onStarClick = {
-                        currentQuestion = currentQuestion.copy(
-                            rating = it,
-                        )
-                        listOfQuestions = listOfQuestions.map { question ->
-                            if (question.order == currentQuestion.order) {
-                                question.copy(
-                                    rating = when (it) {
-                                        DomainRateStar.UNSELECTED -> DataRateStar.UNSELECTED
-                                        DomainRateStar.ONE -> DataRateStar.ONE
-                                        DomainRateStar.TWO -> DataRateStar.TWO
-                                        DomainRateStar.THREE -> DataRateStar.THREE
-                                        DomainRateStar.FOUR -> DataRateStar.FOUR
-                                        DomainRateStar.FIVE -> DataRateStar.FIVE
-                                    },
-                                )
-                            } else {
-                                question
-                            }
-                        }
-
-                        composeScope.launch {
-                            delay(1000)
-                            val nextQuestion =
-                                listOfQuestions.firstOrNull { it.order == currentQuestion.order + 1 }
-                            nextQuestion?.let { question ->
-                                currentQuestion = question.toDomain()
-                            }
+                    onStarClick = { rateStar ->
+                        ioScope.launch {
+                            feedbackAppState.onStartClick(rateStar)
                         }
                     },
                 )
-                Row(
+                QuestionPagerControl(
+                    feedbackAppBehavior = feedbackAppState,
+                    isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
+                    isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Button(
-                        onClick = {
-                            val previousQuestion =
-                                listOfQuestions.firstOrNull { it.order == currentQuestion.order - 1 }
-                            previousQuestion?.let {
-                                currentQuestion = it.toDomain()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                    ) {
-                        Icon(
-                            Icons.Default.KeyboardArrowUp,
-                            contentDescription = "Previous question",
-                        )
-                    }
-
-                    if (currentQuestion.order >= (listOfQuestions.lastOrNull()?.order ?: -1)) {
-                        Button(
-                            onClick = {
-                                // TODO Send answer to answer/add
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                        ) {
-                            Text(text = "Enviar")
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                val nextQuestion =
-                                    listOfQuestions.firstOrNull { it.order == currentQuestion.order + 1 }
-                                nextQuestion?.let {
-                                    currentQuestion = it.toDomain()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                        ) {
-                            Icon(
-                                Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Next question",
-                            )
-                        }
-                    }
-                }
+                )
             }
             QuestionImage(currentQuestion)
         }
     }
+}
+
+@Composable
+private fun QuestionPagerControl(
+    feedbackAppBehavior: FeedbackAppBehavior,
+    isPreviousButtonEnabled: Boolean,
+    isNextButtonEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+    ) {
+        Button(
+            onClick = {
+                feedbackAppBehavior.onPreviousClick()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+            enabled = isPreviousButtonEnabled,
+        ) {
+            Icon(
+                Icons.Default.KeyboardArrowUp,
+                contentDescription = "Previous question",
+            )
+        }
+
+        Button(
+            onClick = {
+                feedbackAppBehavior.onNextClick()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+            enabled = isNextButtonEnabled,
+        ) {
+            Icon(
+                Icons.Default.KeyboardArrowDown,
+                contentDescription = "Next question",
+            )
+        }
+    }
+}
+
+private class FeedbackAppState(private val questionRemoteDataSource: QuestionRemoteDataSource) :
+    FeedbackAppBehavior {
+    private val _listOfQuestions = MutableStateFlow(emptyList<DomainQuestion>())
+    val listOfQuestions: StateFlow<List<DomainQuestion>> get() = _listOfQuestions
+    private val _currentQuestion = MutableStateFlow(DomainQuestion())
+    val currentQuestion: StateFlow<DomainQuestion> get() = _currentQuestion
+    val isPreviousButtonEnabled: Boolean
+        get() = !isLoading.value && currentQuestion.value.order > 1
+
+    val isNextButtonEnabled: Boolean
+        get() = !isLoading.value &&
+            currentQuestion.value.order < listOfQuestions.value.size &&
+            listOfQuestions
+                .value
+                .any { it.rating != DomainRateStar.UNSELECTED } &&
+            currentQuestion.value.rating != DomainRateStar.UNSELECTED
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    override suspend fun getQuestions() {
+        _listOfQuestions.value = questionRemoteDataSource.getQuestions()
+            .map { it.toDomain() }
+            .sortedBy { it.order }
+        _currentQuestion.value = listOfQuestions.value.first()
+    }
+
+    override fun onPreviousClick() {
+        val previousQuestion = listOfQuestions
+            .value
+            .firstOrNull { it.order == _currentQuestion.value.order - 1 }
+
+        previousQuestion
+            ?.let { _currentQuestion.value = it }
+    }
+
+    override fun onNextClick() {
+        val nextQuestion = listOfQuestions
+            .value
+            .firstOrNull { it.order == _currentQuestion.value.order + 1 }
+
+        nextQuestion
+            ?.let { _currentQuestion.value = it }
+    }
+
+    override suspend fun onStartClick(rateStar: RateStar) {
+        _currentQuestion.value = currentQuestion.value.copy(
+            rating = rateStar,
+        )
+        _listOfQuestions.value = listOfQuestions.value.map { question ->
+            if (question.order == currentQuestion.value.order) {
+                question.copy(
+                    rating = rateStar,
+                )
+            } else {
+                question
+            }
+        }
+        if (listOfQuestions.value.all { it.rating != DomainRateStar.UNSELECTED }) {
+            addAnswer()
+        } else {
+            controlledDelay()
+            onNextClick()
+        }
+    }
+
+    override suspend fun controlledDelay() {
+        _isLoading.value = true
+        delay(214)
+        _isLoading.value = false
+    }
+
+    override suspend fun addAnswer() {
+        val answer = Answer(
+            answers = listOfQuestions.value.map {
+                AnswerPerQuestion(
+                    it.question,
+                    it.order,
+                    it.rating.value,
+                )
+            },
+            author = "default",
+            created_at = currentTimeInMillis(),
+        )
+        questionRemoteDataSource.addAnswer(answer)
+        controlledDelay()
+        getQuestions()
+    }
+}
+
+private interface FeedbackAppBehavior {
+    suspend fun getQuestions()
+    fun onPreviousClick()
+
+    fun onNextClick()
+
+    suspend fun onStartClick(rateStar: RateStar)
+    suspend fun controlledDelay()
+    suspend fun addAnswer()
 }
 
 @OptIn(ExperimentalResourceApi::class)
@@ -244,8 +323,9 @@ fun QuestionBlock(
 }
 
 @Composable
-fun RatingBlock(
+private fun RatingBlock(
     rating: DomainRateStar,
+    isEnabled: Boolean,
     modifier: Modifier = Modifier,
     onStarClick: (DomainRateStar) -> Unit = {},
 ) {
@@ -276,7 +356,12 @@ fun RatingBlock(
                         },
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable { onStarClick(rateStar) },
+                            .clickable(
+                                onClick = {
+                                    onStarClick(rateStar)
+                                },
+                                enabled = isEnabled,
+                            ),
                     )
                 }
             }

@@ -3,10 +3,10 @@ package model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Answer(
+data class AnswerPayload(
     val answers: List<AnswerPerQuestion> = listOf(),
     val author: String = "",
-    val created_at: Long = 0L,
+    val created_at: Double = 0.0,
 )
 
 @Serializable

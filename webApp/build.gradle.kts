@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
@@ -26,9 +25,11 @@ kotlin {
     js(IR) {
         moduleName = "imageviewer"
         browser {
-            commonWebpackConfig {
-                outputFileName = "imageviewer.js"
-            }
+            commonWebpackConfig(
+                Action<KotlinWebpackConfig> {
+                    outputFileName = "imageviewer.js"
+                },
+            )
         }
         binaries.executable()
     }
@@ -36,23 +37,25 @@ kotlin {
     wasm {
         moduleName = "imageviewer"
         browser {
-            commonWebpackConfig {
-                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).copy(
+            commonWebpackConfig(
+                Action<KotlinWebpackConfig> {
+                    devServer = (devServer ?: KotlinWebpackConfig.DevServer()).copy(
 //                    open = mapOf(
 //                        "app" to mapOf(
 //                            "name" to "google chrome canary",
 //                            "arguments" to listOf("--js-flags=--experimental-wasm-gc ")
 //                        )
 //                    ),
-                    static = (devServer?.static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(project.rootDir.path)
-                        add(project.rootDir.path + "/shared/")
-                        add(project.rootDir.path + "/nonAndroidMain/")
-                        add(project.rootDir.path + "/webApp/")
-                    },
-                )
-            }
+                        static = (devServer?.static ?: mutableListOf()).apply {
+                            // Serve sources to debug inside browser
+                            add(project.rootDir.path)
+                            add(project.rootDir.path + "/shared/")
+                            add(project.rootDir.path + "/nonAndroidMain/")
+                            add(project.rootDir.path + "/webApp/")
+                        },
+                    )
+                },
+            )
         }
         binaries.executable()
     }
@@ -72,11 +75,12 @@ kotlin {
         val jsMain by getting {
             dependsOn(jsWasmMain)
             dependencies {
-                implementation("io.ktor:ktor-client-core:2.3.3")
-                implementation("io.ktor:ktor-client-js:2.3.3")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.3")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+                implementation("io.ktor:ktor-client-core:2.3.4")
+                implementation("io.ktor:ktor-client-js:2.3.4")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.4")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
+                implementation("io.ktor:ktor-client-logging:2.3.4")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
             }
         }
         val wasmMain by getting {

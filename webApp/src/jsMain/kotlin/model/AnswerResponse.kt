@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AnswerResponse(
-    val answer: Answer = Answer(),
+    val answerPayload: AnswerPayload = AnswerPayload(),
     val path: String = "",
     val query: String = "",
     val cookies: List<String> = listOf(),

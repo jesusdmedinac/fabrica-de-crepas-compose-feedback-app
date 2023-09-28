@@ -1,16 +1,19 @@
+import com.jesusdmedinac.feedbackapp.data.model.Answer
 import com.jesusdmedinac.feedbackapp.data.model.AnswerResponse
 import example.imageviewer.model.WrappedHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.JsClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
 import io.ktor.client.statement.readBytes
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import model.Answer
+import model.AnswerPayload
 import model.AnswerPerQuestion
 import model.Question
 import model.QuestionResponse
@@ -18,8 +21,6 @@ import com.jesusdmedinac.feedbackapp.data.model.Answer as DataAnswer
 import com.jesusdmedinac.feedbackapp.data.model.AnswerPerQuestion as DataAnswerPerQuestion
 import com.jesusdmedinac.feedbackapp.data.model.Question as DataQuestion
 import com.jesusdmedinac.feedbackapp.data.model.QuestionResponse as DataQuestionResponse
-
-actual fun platformName(): String = "JS"
 
 actual fun createWrappedHttpClient(): WrappedHttpClient {
     return object : WrappedHttpClient {
@@ -34,6 +35,14 @@ actual fun createWrappedHttpClient(): WrappedHttpClient {
                         }
                         ),
                 )
+                install(Logging) {
+                    logger = object : Logger {
+                        override fun log(message: String) {
+                            console.log("Ktor: $message")
+                        }
+                    }
+                    level = LogLevel.HEADERS
+                }
             }
         }
 
@@ -50,24 +59,39 @@ actual fun createWrappedHttpClient(): WrappedHttpClient {
             urlString: String,
             answer: DataAnswer,
         ): AnswerResponse {
-            val answerResponse: model.AnswerResponse = ktorClient.post(urlString) {
-                setBody(answer)
+            val answerPayload = answer.toAnswerPayload()
+            val answerPayloadAsString = Json.encodeToString(answerPayload)
+
+            val answerResponse: model.AnswerResponse = ktorClient.get(urlString) {
+                url {
+                    parameters.append("answer", answerPayloadAsString)
+                }
             }.body()
+
             return answerResponse.toDataAnswerResponse()
         }
     }
 }
 
+private fun Answer.toAnswerPayload(): AnswerPayload = AnswerPayload(
+    answers.map { it.toAnswerPerQuestion() },
+    author,
+    created_at,
+)
+
+private fun DataAnswerPerQuestion.toAnswerPerQuestion(): AnswerPerQuestion =
+    AnswerPerQuestion(question, order, rating)
+
 private fun model.AnswerResponse.toDataAnswerResponse(): AnswerResponse {
     return AnswerResponse(
-        answer.toDataAnswer(),
+        answerPayload.toDataAnswer(),
         path,
         query,
         cookies,
     )
 }
 
-private fun Answer.toDataAnswer(): DataAnswer = DataAnswer(
+private fun AnswerPayload.toDataAnswer(): DataAnswer = DataAnswer(
     answers.map { it.toDataAnswerPerQuestion() },
     author,
     created_at,

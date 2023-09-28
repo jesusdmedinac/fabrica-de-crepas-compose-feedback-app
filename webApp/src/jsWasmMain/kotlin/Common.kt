@@ -18,8 +18,6 @@ import example.imageviewer.view.ToastState
 import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-expect fun platformName(): String
-
 expect fun createWrappedHttpClient(): WrappedHttpClient
 
 @Composable

@@ -3,7 +3,7 @@ package com.jesusdmedinac.feedbackapp.data.model
 data class Answer(
     val answers: List<AnswerPerQuestion> = listOf(),
     val author: String = "",
-    val created_at: Long = 0L,
+    val created_at: Double = 0.0,
 )
 
 data class AnswerPerQuestion(
