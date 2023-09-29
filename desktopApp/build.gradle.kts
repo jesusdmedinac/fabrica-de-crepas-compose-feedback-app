@@ -25,7 +25,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ImageViewer"
+            packageName = "FeedbackApp"
             packageVersion = "1.0.0"
 
             val iconsRoot = project.file("../common/src/desktopMain/resources/images")

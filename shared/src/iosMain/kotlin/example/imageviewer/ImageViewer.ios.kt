@@ -50,7 +50,7 @@ fun getDependencies(ioScope: CoroutineScope, toastState: MutableState<ToastState
     }
 
     override val localization: Localization = object : Localization {
-        override val appName = "ImageViewer"
+        override val appName = "FeedbackApp"
         override val loading = "Loading images..."
         override val repoEmpty = "Repository is empty."
         override val noInternet = "No internet access."
