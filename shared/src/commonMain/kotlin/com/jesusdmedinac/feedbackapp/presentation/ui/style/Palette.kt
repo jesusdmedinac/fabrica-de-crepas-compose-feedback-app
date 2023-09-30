@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
-import example.imageviewer.style.ImageviewerColors
 
 object FeedbackAppColors {
     val Gray = Color.DarkGray
@@ -55,8 +54,8 @@ fun FeedbackAppTheme(content: @Composable () -> Unit) {
     isSystemInDarkTheme() // todo check and change colors
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(
-            background = ImageviewerColors.background,
-            onBackground = ImageviewerColors.onBackground,
+            background = FeedbackAppColors.background,
+            onBackground = FeedbackAppColors.onBackground,
         ),
     ) {
         ProvideTextStyle(LocalTextStyle.current.copy(letterSpacing = 0.sp)) {

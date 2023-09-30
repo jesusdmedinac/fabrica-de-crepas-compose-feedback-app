@@ -38,32 +38,28 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jesusdmedinac.feedbackapp.data.model.Answer
-import com.jesusdmedinac.feedbackapp.data.model.AnswerPerQuestion
-import com.jesusdmedinac.feedbackapp.data.model.Question
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswer
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerPerQuestion
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestion
 import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSource
-import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSourceImpl
 import com.jesusdmedinac.feedbackapp.domain.model.RateStar
 import com.jesusdmedinac.feedbackapp.presentation.ui.style.FeedbackAppTheme
 import com.jesusdmedinac.feedbackapp.utils.currentTimeInMillis
-import example.imageviewer.model.WrappedHttpClient
-import example.imageviewer.toImageBitmap
-import example.imageviewer.utils.ioDispatcher
+import com.jesusdmedinac.feedbackapp.utils.toImageBitmap
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.resource
-import com.jesusdmedinac.feedbackapp.data.model.RateStar as DataRateStar
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataRateStar as DataRateStar
 import com.jesusdmedinac.feedbackapp.domain.model.Question as DomainQuestion
 import com.jesusdmedinac.feedbackapp.domain.model.RateStar as DomainRateStar
 
 @Composable
-fun FeedbackApp(httpClient: WrappedHttpClient) {
-    var questionRemoteDataSource = QuestionRemoteDataSourceImpl(httpClient)
-
+fun FeedbackAppWithTheme(questionRemoteDataSource: QuestionRemoteDataSource) {
     FeedbackAppTheme {
         FeedbackAppContent(questionRemoteDataSource)
     }
@@ -72,9 +68,9 @@ fun FeedbackApp(httpClient: WrappedHttpClient) {
 @Composable
 fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
     val feedbackAppState = FeedbackAppState(questionRemoteDataSource)
-    val ioScope: CoroutineScope = rememberCoroutineScope { ioDispatcher }
+    val coroutineScope: CoroutineScope = rememberCoroutineScope { Dispatchers.Unconfined }
     LaunchedEffect(Unit) {
-        ioScope.launch {
+        coroutineScope.launch {
             feedbackAppState.getQuestions()
         }
     }
@@ -103,7 +99,7 @@ fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
                     isEnabled = !isLoading,
                     rating = currentQuestion.rating,
                     onStarClick = { rateStar ->
-                        ioScope.launch {
+                        coroutineScope.launch {
                             feedbackAppState.onStartClick(rateStar)
                         }
                     },
@@ -230,9 +226,9 @@ private class FeedbackAppState(private val questionRemoteDataSource: QuestionRem
     }
 
     override suspend fun addAnswer() {
-        val answer = Answer(
+        val answer = CommonDataAnswer(
             answers = listOfQuestions.value.map {
-                AnswerPerQuestion(
+                CommonDataAnswerPerQuestion(
                     it.question,
                     it.order,
                     it.rating.value,
@@ -289,7 +285,7 @@ private fun RowScope.QuestionImage(currentQuestion: com.jesusdmedinac.feedbackap
     }
 }
 
-private fun Question.toDomain(): DomainQuestion = DomainQuestion(
+private fun CommonDataQuestion.toDomain(): DomainQuestion = DomainQuestion(
     order = order,
     question = question,
     image = image,

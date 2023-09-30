@@ -18,7 +18,7 @@ kotlin {
 android {
     compileSdk = 33
     defaultConfig {
-        applicationId = "org.jetbrains.Imageviewer"
+        applicationId = "com.jesusdmedinac.feedbackapp"
         minSdk = 26
         targetSdk = 33
         versionCode = 1

@@ -22,7 +22,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "imageviewer"
+rootProject.name = "feedbackapp"
 
 include(":androidApp")
 include(":shared")

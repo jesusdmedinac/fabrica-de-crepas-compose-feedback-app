@@ -23,11 +23,11 @@ afterEvaluate {
 
 kotlin {
     js(IR) {
-        moduleName = "imageviewer"
+        moduleName = "feedbackapp"
         browser {
             commonWebpackConfig(
                 Action<KotlinWebpackConfig> {
-                    outputFileName = "imageviewer.js"
+                    outputFileName = "feedbackapp.js"
                 },
             )
         }
@@ -35,7 +35,7 @@ kotlin {
     }
 
     wasm {
-        moduleName = "imageviewer"
+        moduleName = "feedbackapp"
         browser {
             commonWebpackConfig(
                 Action<KotlinWebpackConfig> {
