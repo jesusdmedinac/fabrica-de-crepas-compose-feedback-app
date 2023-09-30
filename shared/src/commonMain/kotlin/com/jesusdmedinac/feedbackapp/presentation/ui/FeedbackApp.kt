@@ -85,6 +85,7 @@ fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
         Row(
             modifier = Modifier.fillMaxSize(),
         ) {
+            Text("Feedback App")
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
