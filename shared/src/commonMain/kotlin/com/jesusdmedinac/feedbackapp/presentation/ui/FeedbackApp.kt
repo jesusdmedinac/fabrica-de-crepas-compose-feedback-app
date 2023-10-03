@@ -76,7 +76,6 @@ fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
     }
 
     val isLoading by feedbackAppState.isLoading.collectAsState()
-    val listOfQuestions by feedbackAppState.listOfQuestions.collectAsState()
     val currentQuestion by feedbackAppState.currentQuestion.collectAsState()
 
     Scaffold(
@@ -181,20 +180,16 @@ private class FeedbackAppState(private val questionRemoteDataSource: QuestionRem
     }
 
     override fun onPreviousClick() {
-        val previousQuestion = listOfQuestions
+        listOfQuestions
             .value
             .firstOrNull { it.order == _currentQuestion.value.order - 1 }
-
-        previousQuestion
             ?.let { _currentQuestion.value = it }
     }
 
     override fun onNextClick() {
-        val nextQuestion = listOfQuestions
+        listOfQuestions
             .value
             .firstOrNull { it.order == _currentQuestion.value.order + 1 }
-
-        nextQuestion
             ?.let { _currentQuestion.value = it }
     }
 
