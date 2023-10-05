@@ -3,12 +3,12 @@ package com.jesusdmedinac.feedbackapp.presentation.ui
 import androidx.compose.ui.window.application
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswer
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerResponse
-import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestion
-import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSource
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataPage
+import com.jesusdmedinac.feedbackapp.data.remote.PageRemoteDataSource
 
 fun main() = application {
-    FeedbackAppWithTheme(object : QuestionRemoteDataSource {
-        override suspend fun getQuestions(): List<CommonDataQuestion> {
+    FeedbackAppWithTheme(object : PageRemoteDataSource {
+        override suspend fun getPages(): List<CommonDataPage> {
             TODO("Not yet implemented")
         }
 
