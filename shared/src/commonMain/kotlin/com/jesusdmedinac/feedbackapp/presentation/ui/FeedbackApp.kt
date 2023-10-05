@@ -1,6 +1,7 @@
 package com.jesusdmedinac.feedbackapp.presentation.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -43,8 +45,10 @@ import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerPerQuestion
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestion
 import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSource
 import com.jesusdmedinac.feedbackapp.domain.model.RateStar
+import com.jesusdmedinac.feedbackapp.presentation.ui.shape.TriangleShape
 import com.jesusdmedinac.feedbackapp.presentation.ui.style.FeedbackAppTheme
 import com.jesusdmedinac.feedbackapp.utils.currentTimeInMillis
+import com.jesusdmedinac.feedbackapp.utils.isDevMode
 import com.jesusdmedinac.feedbackapp.utils.toImageBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,36 +85,49 @@ fun FeedbackAppContent(questionRemoteDataSource: QuestionRemoteDataSource) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(0.6f)
-                    .padding(56.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+        Box {
+            Row(
+                modifier = Modifier.fillMaxSize(),
             ) {
-                QuestionBlock(currentQuestion)
-                Spacer(modifier = Modifier.size(32.dp))
-                RatingBlock(
-                    isEnabled = !isLoading,
-                    rating = currentQuestion.rating,
-                    onStarClick = { rateStar ->
-                        coroutineScope.launch {
-                            feedbackAppState.onStartClick(rateStar)
-                        }
-                    },
-                )
-                QuestionPagerControl(
-                    feedbackAppBehavior = feedbackAppState,
-                    isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
-                    isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(0.6f)
+                        .padding(56.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    QuestionBlock(currentQuestion)
+                    Spacer(modifier = Modifier.size(32.dp))
+                    RatingBlock(
+                        isEnabled = !isLoading,
+                        rating = currentQuestion.rating,
+                        onStarClick = { rateStar ->
+                            coroutineScope.launch {
+                                feedbackAppState.onStartClick(rateStar)
+                            }
+                        },
+                    )
+                    QuestionPagerControl(
+                        feedbackAppBehavior = feedbackAppState,
+                        isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
+                        isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                QuestionImage(currentQuestion)
             }
-            QuestionImage(currentQuestion)
+            if (isDevMode()) {
+                Box(
+                    contentAlignment = Alignment.TopStart,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(TriangleShape())
+                        .background(Color.Green),
+                ) {
+                    Text("Dev Mode")
+                }
+            }
         }
     }
 }
