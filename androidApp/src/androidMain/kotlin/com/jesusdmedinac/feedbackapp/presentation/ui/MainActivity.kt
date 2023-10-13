@@ -5,15 +5,15 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswer
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerResponse
-import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestion
-import com.jesusdmedinac.feedbackapp.data.remote.QuestionRemoteDataSource
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataPage
+import com.jesusdmedinac.feedbackapp.data.remote.PageRemoteDataSource
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            FeedbackAppWithTheme(object : QuestionRemoteDataSource {
-                override suspend fun getQuestions(): List<CommonDataQuestion> {
+            FeedbackAppWithTheme(object : PageRemoteDataSource {
+                override suspend fun getPages(): List<CommonDataPage> {
                     TODO("Not yet implemented")
                 }
 

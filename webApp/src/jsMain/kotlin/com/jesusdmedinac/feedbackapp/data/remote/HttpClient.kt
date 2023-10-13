@@ -3,14 +3,17 @@ package com.jesusdmedinac.feedbackapp.data.remote
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswer
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerPerQuestion
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataAnswerResponse
-import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestion
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataPage
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataPageType
 import com.jesusdmedinac.feedbackapp.data.model.CommonDataQuestionResponse
+import com.jesusdmedinac.feedbackapp.data.model.CommonDataRateStar
 import com.jesusdmedinac.feedbackapp.data.model.JSDataAnswer
 import com.jesusdmedinac.feedbackapp.data.model.JSDataAnswerPayload
 import com.jesusdmedinac.feedbackapp.data.model.JSDataAnswerPerQuestion
 import com.jesusdmedinac.feedbackapp.data.model.JSDataAnswerResponse
-import com.jesusdmedinac.feedbackapp.data.model.JSDataQuestion
-import com.jesusdmedinac.feedbackapp.data.model.JSDataQuestionResponse
+import com.jesusdmedinac.feedbackapp.data.model.JSDataPage
+import com.jesusdmedinac.feedbackapp.data.model.JSDataPageResponse
+import com.jesusdmedinac.feedbackapp.data.model.JSDataRateStar
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.JsClient
@@ -47,8 +50,8 @@ actual fun createWrappedHttpClient(): WrappedHttpClient = object : WrappedHttpCl
     }
 
     override suspend fun get(urlString: String): CommonDataQuestionResponse {
-        val jsDataQuestionResponse: JSDataQuestionResponse = ktorClient.get(urlString).body()
-        return jsDataQuestionResponse.toCommonDataQuestionResponse()
+        val jsDataPageResponse: JSDataPageResponse = ktorClient.get(urlString).body()
+        return jsDataPageResponse.toCommonDataQuestionResponse()
     }
 
     override suspend fun post(
@@ -95,13 +98,28 @@ private fun JSDataAnswer.toCommonDataAnswer(): CommonDataAnswer = CommonDataAnsw
 private fun JSDataAnswerPerQuestion.toCommonDataAnswerPerQuestion(): CommonDataAnswerPerQuestion =
     CommonDataAnswerPerQuestion(question, order, rating)
 
-private fun JSDataQuestionResponse.toCommonDataQuestionResponse(): CommonDataQuestionResponse =
+private fun JSDataPageResponse.toCommonDataQuestionResponse(): CommonDataQuestionResponse =
     CommonDataQuestionResponse(
-        questions.map { it.toCommonDataQuestion() },
+        pages.map { it.toCommonDataPage() },
         path,
         query,
         cookies,
     )
 
-private fun JSDataQuestion.toCommonDataQuestion(): CommonDataQuestion =
-    CommonDataQuestion(order, question, image)
+private fun JSDataPage.toCommonDataPage(): CommonDataPage =
+    CommonDataPage(order, text, image, rating.toCommonDataRateStar(), type.toCommonDataPageType())
+
+fun JSDataRateStar.toCommonDataRateStar(): CommonDataRateStar = when (this) {
+    JSDataRateStar.UNSELECTED -> CommonDataRateStar.UNSELECTED
+    JSDataRateStar.ONE -> CommonDataRateStar.ONE
+    JSDataRateStar.TWO -> CommonDataRateStar.TWO
+    JSDataRateStar.THREE -> CommonDataRateStar.THREE
+    JSDataRateStar.FOUR -> CommonDataRateStar.FOUR
+    JSDataRateStar.FIVE -> CommonDataRateStar.FIVE
+}
+
+fun String.toCommonDataPageType(): CommonDataPageType = when (this) {
+    "MESSAGE" -> CommonDataPageType.MESSAGE
+    "QUESTION" -> CommonDataPageType.QUESTION
+    else -> CommonDataPageType.UNKNOWN
+}

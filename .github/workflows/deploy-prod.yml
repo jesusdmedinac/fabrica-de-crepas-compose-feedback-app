@@ -1,4 +1,4 @@
-name: Android CI
+name: Build and Deploy to Firebase Hosting on prod
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
+  build-and-deploy:
 
     runs-on: ubuntu-latest
 
