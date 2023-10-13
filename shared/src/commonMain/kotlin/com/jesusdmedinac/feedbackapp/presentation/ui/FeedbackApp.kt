@@ -58,7 +58,7 @@ fun FeedbackAppContent(
     }
 
     val isLoading by feedbackAppState.isLoading.collectAsState()
-    val currentPage: CommonDomainPage by feedbackAppState.currentQuestion.collectAsState()
+    val currentPage: CommonDomainPage by feedbackAppState.currentPage.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -102,83 +102,83 @@ class FeedbackAppState(
     private val coroutineScope: CoroutineScope,
 ) :
     FeedbackAppBehavior {
-    private val _listOfQuestions = MutableStateFlow(emptyList<CommonDomainPage>())
-    val listOfQuestions: StateFlow<List<CommonDomainPage>> get() = _listOfQuestions
-    private val _currentQuestion = MutableStateFlow(CommonDomainPage())
-    val currentQuestion: StateFlow<CommonDomainPage> get() = _currentQuestion
+    private val _listOfPages = MutableStateFlow(emptyList<CommonDomainPage>())
+    val listOfPages: StateFlow<List<CommonDomainPage>> get() = _listOfPages
+    private val _currentPage = MutableStateFlow(CommonDomainPage())
+    val currentPage: StateFlow<CommonDomainPage> get() = _currentPage
     val isPreviousButtonEnabled: Boolean
-        get() = !isLoading.value && currentQuestion.value.order > 1
+        get() = !isLoading.value && currentPage.value.order > 1
 
     val isNextButtonEnabled: Boolean
         get() = !isLoading.value &&
-            currentQuestion.value.order < listOfQuestions.value.size &&
-            listOfQuestions
+            currentPage.value.order < listOfPages.value.size &&
+            listOfPages
                 .value
                 .any { it.rating != CommonDomainRateStar.UNSELECTED } &&
-            currentQuestion.value.rating != CommonDomainRateStar.UNSELECTED
+            currentPage.value.rating != CommonDomainRateStar.UNSELECTED
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     override fun getPages() {
         coroutineScope.launch {
-            _listOfQuestions.value = pageRemoteDataSource.getPages()
+            _listOfPages.value = pageRemoteDataSource.getPages()
                 .map { it.toDomain() }
                 .sortedBy { it.order }
-            _currentQuestion.value = listOfQuestions.value.first()
+            _currentPage.value = listOfPages.value.first()
         }
     }
 
     override fun onPreviousClick() {
-        listOfQuestions
+        listOfPages
             .value
-            .firstOrNull { it.order == _currentQuestion.value.order - 1 }
-            ?.let { _currentQuestion.value = it }
+            .firstOrNull { it.order == _currentPage.value.order - 1 }
+            ?.let { _currentPage.value = it }
     }
 
     override fun onNextClick() {
-        listOfQuestions
+        listOfPages
             .value
-            .firstOrNull { it.order == _currentQuestion.value.order + 1 }
-            ?.let { _currentQuestion.value = it }
+            .firstOrNull { it.order == _currentPage.value.order + 1 }
+            ?.let { _currentPage.value = it }
     }
 
     override fun onStartClick(commonDomainRateStar: CommonDomainRateStar) {
-        _currentQuestion.value = currentQuestion.value.copy(
+        _currentPage.value = currentPage.value.copy(
             rating = commonDomainRateStar,
         )
-        _listOfQuestions.value = listOfQuestions.value.map { question ->
-            if (question.order == currentQuestion.value.order) {
-                question.copy(
+        _listOfPages.value = listOfPages.value.map { page ->
+            if (page.order == currentPage.value.order) {
+                page.copy(
                     rating = commonDomainRateStar,
                 )
             } else {
-                question
+                page
             }
         }
-        coroutineScope.launch {
-            if (listOfQuestions
-                    .value
-                    .filter { it.type == CommonDomainPageType.QUESTION }
-                    .all { it.rating != CommonDomainRateStar.UNSELECTED }
-            ) {
-                addAnswer()
-            }
-            controlledDelay()
+        if (listOfPages
+                .value
+                .filter { it.type == CommonDomainPageType.QUESTION }
+                .all { it.rating != CommonDomainRateStar.UNSELECTED }
+        ) {
+            addAnswer()
+        }
+        controlledDelay {
             onNextClick()
         }
     }
 
-    override fun controlledDelay() {
+    private fun controlledDelay(doAfterDelay: () -> Unit) {
         coroutineScope.launch {
             _isLoading.value = true
             delay(214)
+            doAfterDelay()
             _isLoading.value = false
         }
     }
 
     override fun addAnswer() {
         val answer = CommonDataAnswer(
-            answers = listOfQuestions.value.map {
+            answers = listOfPages.value.map {
                 CommonDataAnswerPerQuestion(
                     it.text,
                     it.order,
@@ -195,8 +195,9 @@ class FeedbackAppState(
 
     override fun sendNewAnswer() {
         coroutineScope.launch {
-            controlledDelay()
-            getPages()
+            controlledDelay {
+                getPages()
+            }
         }
     }
 
@@ -227,7 +228,6 @@ interface FeedbackAppBehavior {
     fun onNextClick()
 
     fun onStartClick(commonDomainRateStar: CommonDomainRateStar)
-    fun controlledDelay()
     fun addAnswer()
     fun sendNewAnswer()
 }
