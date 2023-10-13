@@ -1,4 +1,4 @@
-name: Android CI
+name: Build and Deploy to Firebase Hosting on prod
 
 on:
   push:
