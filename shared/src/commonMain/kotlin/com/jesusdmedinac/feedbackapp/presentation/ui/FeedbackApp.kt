@@ -1,5 +1,8 @@
 package com.jesusdmedinac.feedbackapp.presentation.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,11 +57,11 @@ fun FeedbackAppContent(
     val coroutineScope: CoroutineScope = rememberCoroutineScope { Dispatchers.Unconfined }
     val feedbackAppState = FeedbackAppState(pageRemoteDataSource, coroutineScope)
     LaunchedEffect(Unit) {
-        feedbackAppState.getQuestions()
+        feedbackAppState.getPages()
     }
 
     val isLoading by feedbackAppState.isLoading.collectAsState()
-    val currentPage: CommonDomainPage by feedbackAppState.currentQuestion.collectAsState()
+    val currentPage: CommonDomainPage by feedbackAppState.currentPage.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -66,21 +69,34 @@ fun FeedbackAppContent(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            if (currentPage.type == CommonDomainPageType.MESSAGE) {
-                MessagePage(
-                    page = currentPage,
-                    onSendNewAnswerClick = {
-                        feedbackAppState.sendNewAnswer()
-                    },
-                )
-            } else {
-                QuestionPage(
-                    isLoading = isLoading,
-                    page = currentPage,
-                    isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
-                    isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
-                    feedbackAppBehavior = feedbackAppState,
-                )
+            AnimatedVisibility(
+                visible = currentPage.type == CommonDomainPageType.MESSAGE,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                if (currentPage.type == CommonDomainPageType.MESSAGE) {
+                    MessagePage(
+                        page = currentPage,
+                        onSendNewAnswerClick = {
+                            feedbackAppState.sendNewAnswer()
+                        },
+                    )
+                }
+            }
+            AnimatedVisibility(
+                visible = currentPage.type == CommonDomainPageType.QUESTION,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                if (currentPage.type == CommonDomainPageType.QUESTION) {
+                    QuestionPage(
+                        isLoading = isLoading,
+                        page = currentPage,
+                        isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
+                        isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
+                        feedbackAppBehavior = feedbackAppState,
+                    )
+                }
             }
             if (isDevMode()) {
                 Box(
@@ -102,84 +118,83 @@ class FeedbackAppState(
     private val coroutineScope: CoroutineScope,
 ) :
     FeedbackAppBehavior {
-    private val _listOfQuestions = MutableStateFlow(emptyList<CommonDomainPage>())
-    val listOfQuestions: StateFlow<List<CommonDomainPage>> get() = _listOfQuestions
-    private val _currentQuestion = MutableStateFlow(CommonDomainPage())
-    val currentQuestion: StateFlow<CommonDomainPage> get() = _currentQuestion
+    private val _listOfPages = MutableStateFlow(emptyList<CommonDomainPage>())
+    val listOfPages: StateFlow<List<CommonDomainPage>> get() = _listOfPages
+    private val _currentPage = MutableStateFlow(CommonDomainPage())
+    val currentPage: StateFlow<CommonDomainPage> get() = _currentPage
     val isPreviousButtonEnabled: Boolean
-        get() = !isLoading.value && currentQuestion.value.order > 1
+        get() = !isLoading.value && currentPage.value.order > 1
 
     val isNextButtonEnabled: Boolean
         get() = !isLoading.value &&
-            currentQuestion.value.order < listOfQuestions.value.size &&
-            listOfQuestions
+            currentPage.value.order < listOfPages.value.size &&
+            listOfPages
                 .value
                 .any { it.rating != CommonDomainRateStar.UNSELECTED } &&
-            currentQuestion.value.rating != CommonDomainRateStar.UNSELECTED
+            currentPage.value.rating != CommonDomainRateStar.UNSELECTED
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    override fun getQuestions() {
+    override fun getPages() {
         coroutineScope.launch {
-            _listOfQuestions.value = pageRemoteDataSource.getPages()
+            _listOfPages.value = pageRemoteDataSource.getPages()
                 .map { it.toDomain() }
                 .sortedBy { it.order }
-            _currentQuestion.value = listOfQuestions.value.first()
+            _currentPage.value = listOfPages.value.first()
         }
     }
 
     override fun onPreviousClick() {
-        listOfQuestions
+        listOfPages
             .value
-            .firstOrNull { it.order == _currentQuestion.value.order - 1 }
-            ?.let { _currentQuestion.value = it }
+            .firstOrNull { it.order == _currentPage.value.order - 1 }
+            ?.let { _currentPage.value = it.copy(isForward = false) }
     }
 
     override fun onNextClick() {
-        listOfQuestions
+        listOfPages
             .value
-            .firstOrNull { it.order == _currentQuestion.value.order + 1 }
-            ?.let { _currentQuestion.value = it }
+            .firstOrNull { it.order == _currentPage.value.order + 1 }
+            ?.let { _currentPage.value = it.copy(isForward = true) }
     }
 
     override fun onStartClick(commonDomainRateStar: CommonDomainRateStar) {
-        _currentQuestion.value = currentQuestion.value.copy(
+        _currentPage.value = currentPage.value.copy(
             rating = commonDomainRateStar,
         )
-        _listOfQuestions.value = listOfQuestions.value.map { question ->
-            if (question.order == currentQuestion.value.order) {
-                question.copy(
+        _listOfPages.value = listOfPages.value.map { page ->
+            if (page.order == currentPage.value.order) {
+                page.copy(
                     rating = commonDomainRateStar,
                 )
             } else {
-                question
+                page
             }
         }
-        coroutineScope.launch {
-            if (listOfQuestions
-                    .value
-                    .filter { it.type == CommonDomainPageType.QUESTION }
-                    .all { it.rating != CommonDomainRateStar.UNSELECTED }
-            ) {
-                addAnswer()
-            } else {
-                controlledDelay()
-                onNextClick()
-            }
+        if (listOfPages
+                .value
+                .filter { it.type == CommonDomainPageType.QUESTION }
+                .all { it.rating != CommonDomainRateStar.UNSELECTED }
+        ) {
+            addAnswer()
+        }
+        controlledDelay {
+            onNextClick()
         }
     }
 
-    override fun controlledDelay() {
+    private fun controlledDelay(doAfterDelay: () -> Unit) {
         coroutineScope.launch {
             _isLoading.value = true
             delay(214)
+            doAfterDelay()
             _isLoading.value = false
         }
     }
 
     override fun addAnswer() {
         val answer = CommonDataAnswer(
-            answers = listOfQuestions.value.map {
+            answers = listOfPages.value.map {
                 CommonDataAnswerPerQuestion(
                     it.text,
                     it.order,
@@ -196,8 +211,9 @@ class FeedbackAppState(
 
     override fun sendNewAnswer() {
         coroutineScope.launch {
-            controlledDelay()
-            getQuestions()
+            controlledDelay {
+                getPages()
+            }
         }
     }
 
@@ -222,13 +238,12 @@ class FeedbackAppState(
 }
 
 interface FeedbackAppBehavior {
-    fun getQuestions()
+    fun getPages()
     fun onPreviousClick()
 
     fun onNextClick()
 
     fun onStartClick(commonDomainRateStar: CommonDomainRateStar)
-    fun controlledDelay()
     fun addAnswer()
     fun sendNewAnswer()
 }

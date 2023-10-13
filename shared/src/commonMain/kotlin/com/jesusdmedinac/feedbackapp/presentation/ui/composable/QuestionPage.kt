@@ -1,5 +1,13 @@
 package com.jesusdmedinac.feedbackapp.presentation.ui.composable
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -119,7 +127,7 @@ private fun QuestionPagerControl(
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
+@OptIn(ExperimentalResourceApi::class, ExperimentalAnimationApi::class)
 @Composable
 private fun RowScope.QuestionImage(currentPage: CommonDomainPage) {
     Box(
@@ -136,36 +144,58 @@ private fun RowScope.QuestionImage(currentPage: CommonDomainPage) {
                     .toImageBitmap()
             }
         }
-        imageBitmap?.let {
-            Image(
-                modifier = Modifier
-                    .fillMaxSize(),
-                painter = BitmapPainter(
-                    image = it,
-                ),
-                contentDescription = "Feedback app question image",
-                contentScale = ContentScale.Crop,
-            )
+
+        AnimatedContent(
+            targetState = imageBitmap,
+            transitionSpec = {
+                if (currentPage.isForward) {
+                    slideInVertically { height -> height } + fadeIn() with
+                        slideOutVertically { height -> -height } + fadeOut()
+                } else {
+                    slideInVertically { height -> -height } + fadeIn() with
+                        slideOutVertically { height -> height } + fadeOut()
+                }
+            },
+        ) { bitmap ->
+            imageBitmap?.let {
+                Image(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    painter = BitmapPainter(
+                        image = it,
+                    ),
+                    contentDescription = "Feedback app question image",
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun QuestionBlock(
     commonDomainPage: CommonDomainPage,
     modifier: Modifier = Modifier,
 ) {
-    Row {
-        Text(
-            text = "${commonDomainPage.order}.- ",
-            modifier = modifier,
-            fontSize = 32.sp,
-        )
-        Text(
-            text = commonDomainPage.text,
-            modifier = modifier,
-            fontSize = 32.sp,
-        )
+    AnimatedContent(
+        targetState = commonDomainPage,
+        transitionSpec = {
+            fadeIn() with fadeOut()
+        },
+    ) { page ->
+        Row {
+            Text(
+                text = "${page.order}.- ",
+                modifier = modifier,
+                fontSize = 32.sp,
+            )
+            Text(
+                text = page.text,
+                modifier = modifier,
+                fontSize = 32.sp,
+            )
+        }
     }
 }
 
@@ -193,14 +223,17 @@ private fun RatingBlock(
                         tint = Color.Red,
                         modifier = Modifier.size(64.dp),
                     )
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = "Rate star",
-                        tint = if (rateStar.value <= rating.value) {
+                    val starTint by animateColorAsState(
+                        targetValue = if (rateStar.value <= rating.value) {
                             Color.Red
                         } else {
                             Color.White
                         },
+                    )
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = "Rate star",
+                        tint = starTint,
                         modifier = Modifier
                             .size(48.dp)
                             .clickable(
