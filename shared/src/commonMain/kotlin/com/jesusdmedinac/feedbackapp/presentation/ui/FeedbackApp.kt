@@ -1,5 +1,8 @@
 package com.jesusdmedinac.feedbackapp.presentation.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,21 +69,34 @@ fun FeedbackAppContent(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            if (currentPage.type == CommonDomainPageType.MESSAGE) {
-                MessagePage(
-                    page = currentPage,
-                    onSendNewAnswerClick = {
-                        feedbackAppState.sendNewAnswer()
-                    },
-                )
-            } else {
-                QuestionPage(
-                    isLoading = isLoading,
-                    page = currentPage,
-                    isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
-                    isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
-                    feedbackAppBehavior = feedbackAppState,
-                )
+            AnimatedVisibility(
+                visible = currentPage.type == CommonDomainPageType.MESSAGE,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                if (currentPage.type == CommonDomainPageType.MESSAGE) {
+                    MessagePage(
+                        page = currentPage,
+                        onSendNewAnswerClick = {
+                            feedbackAppState.sendNewAnswer()
+                        },
+                    )
+                }
+            }
+            AnimatedVisibility(
+                visible = currentPage.type == CommonDomainPageType.QUESTION,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                if (currentPage.type == CommonDomainPageType.QUESTION) {
+                    QuestionPage(
+                        isLoading = isLoading,
+                        page = currentPage,
+                        isPreviousButtonEnabled = feedbackAppState.isPreviousButtonEnabled,
+                        isNextButtonEnabled = feedbackAppState.isNextButtonEnabled,
+                        feedbackAppBehavior = feedbackAppState,
+                    )
+                }
             }
             if (isDevMode()) {
                 Box(
@@ -132,14 +148,14 @@ class FeedbackAppState(
         listOfPages
             .value
             .firstOrNull { it.order == _currentPage.value.order - 1 }
-            ?.let { _currentPage.value = it }
+            ?.let { _currentPage.value = it.copy(isForward = false) }
     }
 
     override fun onNextClick() {
         listOfPages
             .value
             .firstOrNull { it.order == _currentPage.value.order + 1 }
-            ?.let { _currentPage.value = it }
+            ?.let { _currentPage.value = it.copy(isForward = true) }
     }
 
     override fun onStartClick(commonDomainRateStar: CommonDomainRateStar) {

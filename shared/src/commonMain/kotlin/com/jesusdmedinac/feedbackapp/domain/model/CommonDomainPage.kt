@@ -6,4 +6,5 @@ data class CommonDomainPage(
     val image: String = "",
     val rating: CommonDomainRateStar = CommonDomainRateStar.UNSELECTED,
     val type: CommonDomainPageType = CommonDomainPageType.UNKNOWN,
+    val isForward: Boolean = true,
 )
