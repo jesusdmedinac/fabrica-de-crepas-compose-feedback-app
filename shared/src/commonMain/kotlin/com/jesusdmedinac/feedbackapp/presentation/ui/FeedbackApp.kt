@@ -2,8 +2,11 @@ package com.jesusdmedinac.feedbackapp.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +57,7 @@ fun FeedbackAppContent(
     val coroutineScope: CoroutineScope = rememberCoroutineScope { Dispatchers.Unconfined }
     val feedbackAppState = FeedbackAppState(pageRemoteDataSource, coroutineScope)
     LaunchedEffect(Unit) {
-        feedbackAppState.getQuestions()
+        feedbackAppState.getPages()
     }
 
     val isLoading by feedbackAppState.isLoading.collectAsState()
@@ -119,7 +122,7 @@ class FeedbackAppState(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    override fun getQuestions() {
+    override fun getPages() {
         coroutineScope.launch {
             _listOfQuestions.value = pageRemoteDataSource.getPages()
                 .map { it.toDomain() }
@@ -162,10 +165,9 @@ class FeedbackAppState(
                     .all { it.rating != CommonDomainRateStar.UNSELECTED }
             ) {
                 addAnswer()
-            } else {
-                controlledDelay()
-                onNextClick()
             }
+            controlledDelay()
+            onNextClick()
         }
     }
 
@@ -197,7 +199,7 @@ class FeedbackAppState(
     override fun sendNewAnswer() {
         coroutineScope.launch {
             controlledDelay()
-            getQuestions()
+            getPages()
         }
     }
 
@@ -222,7 +224,7 @@ class FeedbackAppState(
 }
 
 interface FeedbackAppBehavior {
-    fun getQuestions()
+    fun getPages()
     fun onPreviousClick()
 
     fun onNextClick()
